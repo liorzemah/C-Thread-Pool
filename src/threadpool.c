@@ -100,7 +100,7 @@ int tpInsertTask(ThreadPool* threadPool, void (*computeFunc) (void *), void* par
 
     /* Add Task to queue */
     if (err == 0) {
-        Task *task = (Task *) malloc(sizeof(task));
+        Task *task = (Task *) malloc(sizeof(Task));
         task->method = computeFunc;
         task->param = param;
         osEnqueue(threadPool->queue, task);
@@ -183,11 +183,16 @@ int tpFree(ThreadPool *pool)
 
     if(pool->threads) {
         free(pool->threads);
-        osDestroyQueue(pool->queue);
+        pool->threads = NULL;
 
         pthread_mutex_lock(&(pool->lock));
         pthread_mutex_destroy(&(pool->lock));
         pthread_cond_destroy(&(pool->notify));
+    }
+
+    if(pool->queue) {
+        osDestroyQueue(pool->queue);
+        pool->queue = NULL;
     }
     free(pool);
     return 0;
@@ -230,8 +235,10 @@ static void *tpThread(void *threadpool)
 
         //Execute task
         (*(task->method))(task->param);
-    }
 
+
+        free(task);
+    }
 
     pool->started--;
 
